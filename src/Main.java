@@ -116,7 +116,7 @@ public class Main {
             n = n * 2;
         } while (timeTaken < THRESHOLD_MS);
 
-        // The answer is somewhere between the last power of two and the previous power of that
+        // The answer is somewhere between the last power of two and the twice of that, (i.e. twice of largestUnder)
         // Now I'm going to search within that range,
         int low = largestUnder;
         int high = largestUnder * 2;

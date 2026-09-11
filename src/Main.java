@@ -5,8 +5,11 @@ import Fibonacci.FibResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.IntFunction;
 
 public class Main {
+
+    private static final double THRESHOLD_MS = 10.0;
 
     record FibResultCache(int n, FibResult exponential, FibResult polynomial) {
     }
@@ -25,7 +28,17 @@ public class Main {
 
         printTable(cache);
 
+        // For n = 39, exponential algorithm took 197ms while polynomial algorithm took 0.006ms.
+        // So, for maximum possible n calculation less than 10ms is for polynomial algorithm
+        // way bigger than exponential algorithm.
+        // So, we can check the exponential algorithm step by step.
+        // But that does not work for polynomial algorithm, I guess.
+        // For polynomial algorithm, I am going to check it with doubling n.
+        int largestNumberForExponentialAlgorithm = checkExponentialAlgorithm();
+        int largestNumberForPolynomialAlgorithm = checkPolynomialAlgorithm();
 
+        System.out.printf("Largest number for exponential algorithm: %,d%n", largestNumberForExponentialAlgorithm);
+        System.out.printf("Largest number for polynomial algorithm: %,d%n", largestNumberForPolynomialAlgorithm);
     }
 
     private static int[] getRandom10NumbersForFindFibonacci() {
@@ -68,5 +81,71 @@ public class Main {
         }
 
         System.out.println(border);
+    }
+
+    private static int checkExponentialAlgorithm() {
+        int largestUnder = 0;
+        int n = 1;
+        double timeTaken;
+
+        do {
+            timeTaken = bestOfThree(Main::byExponential, n);
+
+            if (timeTaken < THRESHOLD_MS) {
+                largestUnder = n;
+            }
+
+            n++;
+        } while (timeTaken < THRESHOLD_MS);
+
+        return largestUnder;
+    }
+
+    private static int checkPolynomialAlgorithm() {
+        int largestUnder = 0;
+        int n = 1;
+        double timeTaken;
+
+        do {
+            timeTaken = bestOfThree(Main::byPolynomial, n);
+
+            if (timeTaken < THRESHOLD_MS) {
+                largestUnder = n;
+            }
+
+            n = n * 2;
+        } while (timeTaken < THRESHOLD_MS);
+
+        // The answer is somewhere between the last power of two and the previous power of that
+        // Now I'm going to search within that range,
+        int low = largestUnder;
+        int high = largestUnder * 2;
+
+        while (low + 1 < high) { // because of intiger division, it is possible that mid = low. So, we take low + 1
+            int mid = low + (high - low) / 2;
+
+            double midTime = bestOfThree(Main::byPolynomial, mid);
+
+            if (midTime < THRESHOLD_MS) {
+                low = mid;      // mid passed, so the answer is at or above it
+            } else {
+                high = mid;     // mid failed, so the answer is below it
+            }
+        }
+
+        return low;
+    }
+
+    /**
+     * Based on running machine current performance,
+     * time taken can be varied. So I'm gonna try three times and
+     * say the lowest time is the time for given 'n'
+     */
+    private static double bestOfThree(IntFunction<FibResult> algorithm, int n) {
+        double best = Double.MAX_VALUE;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            best = Math.min(best, algorithm.apply(n).millis());
+        }
+        return best;
     }
 }
